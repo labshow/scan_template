@@ -27,7 +27,7 @@ pipeline {
                         script: """
                         curl -s -k ${TSC_HOST}/rest/policy \
                         -H "x-apikey: accesskey=${ACCESS_KEY}; secretkey=${SECRET_KEY}" \
-                        | jq -r '.response.usable[] | select(.name=="${POLICY_NAME}") | .id'
+                        | /usr/local/bin/jq -r '.response.usable[] | select(.name=="${POLICY_NAME}") | .id'
                         """,
                         returnStdout: true
                     ).trim()
@@ -44,7 +44,7 @@ pipeline {
                             -d '{
                             "name":"${POLICY_NAME}",
                             "policyTemplate":{"id":40}
-                            }' | jq -r '.response.id'
+                            }' | /usr/local/bin/jq -r '.response.id'
                             """,
                             returnStdout: true
                         ).trim()
@@ -66,7 +66,7 @@ pipeline {
                         script: """
                         curl -s -k ${TSC_HOST}/rest/wasScan \
                         -H "x-apikey: accesskey=${ACCESS_KEY}; secretkey=${SECRET_KEY}" \
-                        | jq -r '.response.usable[]? | select(.name=="${scanName}") | .id'
+                        | /usr/local/bin/jq -r '.response.usable[]? | select(.name=="${scanName}") | .id'
                         """,
                         returnStdout: true
                     ).trim()
@@ -91,7 +91,7 @@ pipeline {
                         "schedule": {
                         "type": "never"
                         }
-                        }' | jq -r '.response.id'
+                        }' | /usr/local/bin/jq -r '.response.id'
                         """,
                         returnStdout: true
                         ).trim()
