@@ -7,7 +7,6 @@ pipeline {
         SECRET_KEY = "YOUR_SECRET_KEY"
 
         POLICY_NAME = "ci_cd_web_app_policy"
-        CRED_NAME = "web_auth_cookie_juiceshop"
 
         REPOSITORY_ID = "YOUR_REPOSITORY_ID"
         SCAN_ZONE_ID = "YOUR_SCAN_ZONE_ID"
@@ -16,23 +15,7 @@ pipeline {
     }
 
     stages {
-        stage('Get Juiceshop URL') {
-
-            steps {
-
-                script {
-
-                    def hostIP = sh(
-                        script: "ip route | awk '/default/ {print \$3}'",
-                        returnStdout: true
-                    ).trim()
-
-                    env.JUICESHOP_URL = "http://${hostIP}:${DOCKER_PORT}"
-
-                    echo "Juiceshop URL = ${env.JUICESHOP_URL}"
-                }
-            }
-        }
+        // stage deploy your web app & get web app url
 
         stage('Check or Create Policy') {
 
