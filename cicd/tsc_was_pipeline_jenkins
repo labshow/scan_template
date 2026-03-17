@@ -1,0 +1,136 @@
+pipeline {
+
+    environment {
+
+        TSC_HOST = "YOUR_TENABLE_SC_URL"
+        ACCESS_KEY = "YOUR_ACCESS_KEY"
+        SECRET_KEY = "YOUR_SECRET_KEY"
+
+        POLICY_NAME = "ci_cd_web_app_policy"
+        CRED_NAME = "web_auth_cookie_juiceshop"
+
+        REPOSITORY_ID = "YOUR_REPOSITORY_ID"
+        SCAN_ZONE_ID = "YOUR_SCAN_ZONE_ID"
+
+        WEBAPP_URL = "YOUR_WEB_APP_URL"
+    }
+
+    stages {
+        stage('Get Juiceshop URL') {
+
+            steps {
+
+                script {
+
+                    def hostIP = sh(
+                        script: "ip route | awk '/default/ {print \$3}'",
+                        returnStdout: true
+                    ).trim()
+
+                    env.JUICESHOP_URL = "http://${hostIP}:${DOCKER_PORT}"
+
+                    echo "Juiceshop URL = ${env.JUICESHOP_URL}"
+                }
+            }
+        }
+
+        stage('Check or Create Policy') {
+
+            steps {
+
+                script {
+
+                    def POLICY_ID = sh(
+                        script: """
+                        curl -s -k ${TSC_HOST}/rest/policy \
+                        -H "x-apikey: accesskey=${ACCESS_KEY}; secretkey=${SECRET_KEY}" \
+                        | jq -r '.response.usable[] | select(.name=="${POLICY_NAME}") | .id'
+                        """,
+                        returnStdout: true
+                    ).trim()
+
+                    if (!POLICY_ID) {
+
+                        echo "Creating policy"
+
+                        POLICY_ID = sh(
+                            script: """
+                            curl -s -k -X POST ${TSC_HOST}/rest/policy \
+                            -H "x-apikey: accesskey=${ACCESS_KEY}; secretkey=${SECRET_KEY}" \
+                            -H "Content-Type: application/json" \
+                            -d '{
+                            "name":"${POLICY_NAME}",
+                            "policyTemplate":{"id":40}
+                            }' | jq -r '.response.id'
+                            """,
+                            returnStdout: true
+                        ).trim()
+                    }
+
+                    env.POLICY_ID = POLICY_ID
+
+                    echo "Policy ID = ${POLICY_ID}"
+                }
+            }
+        }
+       
+       stage('Check or Create Web App Scan') {
+            steps {
+                script {
+                    def scanName = "Web Scan - ${WEBAPP_URL}"
+
+                    def scanId = sh(
+                        script: """
+                        curl -s -k ${TSC_HOST}/rest/wasScan \
+                        -H "x-apikey: accesskey=${ACCESS_KEY}; secretkey=${SECRET_KEY}" \
+                        | jq -r '.response.usable[]? | select(.name=="${scanName}") | .id'
+                        """,
+                        returnStdout: true
+                    ).trim()
+
+                    if (!scanId) {
+
+                        echo "Scan not found. Creating new scan..."
+
+                        scanId = sh(
+                        script: """
+                        curl -s -k -X POST ${TSC_HOST}/rest/wasScan \
+                        -H "x-apikey: accesskey=${ACCESS_KEY}; secretkey=${SECRET_KEY}" \
+                        -H "Content-Type: application/json" \
+                        -d '{
+                        "name": "${scanName}",
+                        "policy": { "id": ${POLICY_ID} },
+                        "repository": { "id": ${REPOSITORY_ID} },
+                        "zone": { "id": ${SCAN_ZONE_ID} },
+                        "target": {
+                        "urls": ["${WEBAPP_URL}"]
+                        },
+                        "schedule": {
+                        "type": "never"
+                        }
+                        }' | jq -r '.response.id'
+                        """,
+                        returnStdout: true
+                        ).trim()
+                    }
+
+                    env.SCAN_ID = scanId
+
+                    echo "Scan ID = ${env.SCAN_ID}"
+                }
+            }
+        }
+
+        stage('Launch Web App Scan') {
+            steps {
+                script {
+                    sh """
+                    curl -s -k -X POST ${TSC_HOST}/rest/wasScan/${env.SCAN_ID}/launch \
+                    -H "x-apikey: accesskey=${ACCESS_KEY}; secretkey=${SECRET_KEY}"
+                    """
+                }
+            }
+        }
+
+    }
+}
