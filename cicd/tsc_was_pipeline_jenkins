@@ -11,7 +11,7 @@ pipeline {
         REPOSITORY_ID = "YOUR_REPOSITORY_ID"
         SCAN_ZONE_ID = "YOUR_SCAN_ZONE_ID"
 
-        env.WEBAPP_URL = "YOUR_WEB_APP_URL"
+        WEBAPP_URL = "YOUR_WEB_APP_URL"
     }
 
     stages {
@@ -86,9 +86,6 @@ pipeline {
                         "repository": { "id": ${REPOSITORY_ID} },
                         "zone": { "id": ${SCAN_ZONE_ID} },
                         "urlList" : "${WEBAPP_URL}",
-                        //"target": {
-                        //"urls": ["${env.WEBAPP_URL}"]
-                        //},
                         "schedule": {
                         "type": "never"
                         }
